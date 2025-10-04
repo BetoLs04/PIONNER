@@ -1,64 +1,116 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <title>Mapa Calidad del Aire</title>
     <meta charset="utf-8"/>
+    <title>PIONEER</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <!-- Estilos Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
     <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
 
     <style>
         body {
             margin: 0;
-            font-family: "Segoe UI", Arial, sans-serif;
-            background: linear-gradient(135deg, #74ebd5, #9face6);
+            font-family: "Segoe UI", Roboto, Arial, sans-serif;
+            background: radial-gradient(circle at top right, #74ebd5, #3c9ae8, #2c3e50);
+            color: #222;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
             min-height: 100vh;
         }
 
         header {
             width: 100%;
-            padding: 20px;
-            text-align: center;
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(6px);
-            color: #fff;
+            padding: 15px 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            background: rgba(10, 25, 47, 0.8);
+            color: #e0f7fa;
             font-size: 1.8em;
             font-weight: bold;
             letter-spacing: 1px;
-            box-shadow: 0px 2px 10px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            backdrop-filter: blur(6px);
+            position: relative;
+        }
+
+        header img {
+            height: 50px;
+            width: auto;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            padding: 5px;
         }
 
         header span {
             display: block;
-            font-size: 0.6em;
-            margin-top: 5px;
-            color: #fffa;
+            font-size: 0.5em;
+            margin-top: 3px;
+            color: #aee0f8;
+            letter-spacing: 0.5px;
         }
 
         .container {
-            margin-top: 20px;
+            margin-top: 25px;
             background: rgba(255, 255, 255, 0.9);
             border-radius: 15px;
-            box-shadow: 0px 8px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
             overflow: hidden;
             width: 90%;
-            max-width: 1000px;
-            padding: 15px;
+            max-width: 1100px;
+            padding: 20px;
             position: relative;
         }
 
         #map {
             height: 70vh;
             border-radius: 12px;
-            border: 2px solid #333;
+            border: 2px solid #1b3b6f;
+        }
+        #info-panel {
+            margin-top: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            font-size: 0.95em;
         }
 
-        /* Header flotante del mapa */
+        #info-panel h3 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #1b3b6f;
+        }
+
+        .range {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.95em;
+        }
+
+        .range span { margin-left: 8px; }
+
+        .verde { background: #00e400; color: #fff; }
+        .amarillo { background: #ffff00; color: #000; }
+        .naranja { background: #ff7e00; color: #fff; }
+        .rojo { background: #ff0000; color: #fff; }
+        .morado { background: #8f3f97; color: #fff; }
+
+        .impacto h4 {
+            text-align: center;
+            color: #1b3b6f;
+            margin: 10px 0 5px 0;
+        }
+        .impacto ul { padding-left: 20px; }
+
         #locationHeader {
             position: absolute;
             top: 10px;
@@ -71,45 +123,75 @@
             box-shadow: 0 2px 6px rgba(0,0,0,0.3);
             font-family: sans-serif;
             font-weight: bold;
+            color: #333;
         }
 
         .leaflet-popup-content-wrapper {
             background: #fdfdfd;
             border-radius: 12px;
-            border: 2px solid #444;
+            border: 2px solid #1b3b6f;
             box-shadow: 0px 4px 15px rgba(0,0,0,0.3);
         }
 
-        .leaflet-popup-tip {
-            background: #444;
-        }
+        .leaflet-popup-tip { background: #1b3b6f; }
 
         .leaflet-popup-content h3 {
             margin: 5px 0;
-            color: #333;
+            color: #1b3b6f;
             font-size: 1.2em;
         }
 
         .leaflet-popup-content img {
             margin-top: 8px;
             border-radius: 8px;
+            max-width: 100%;
+        }
+
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                text-align: center;
+                font-size: 1.5em;
+            }
+            header img { height: 45px; }
         }
     </style>
 </head>
+
 <body>
     <header>
-        🌍 PIONEER
-        <span id="locationName">Haz clic en un punto del mapa</span>
+        <img src="{{ url_for('static', filename='imagenes/Pioneer.png') }}" alt="Logo PIONEER">
+        PIONEER
+        <span id="locationName">Monitoreo de Calidad del Aire</span>
     </header>
 
     <div class="container">
         <div id="map"></div>
-        <!-- Header flotante dentro del mapa -->
+        <div id="info-panel">
+            <h3>Rangos de Calidad del Aire (SINAICA)</h3>
+            <div class="range verde">&lt; 50 <span>Bueno</span></div>
+            <div class="range amarillo">51 - 100 <span>Regular</span></div>
+            <div class="range naranja">101 - 150 <span>Malo</span></div>
+            <div class="range rojo">151 - 200 <span>Muy Malo</span></div>
+            <div class="range morado">&gt; 200 <span>Extremadamente Malo</span></div>
+
+            <div class="impacto">
+                <h4>Impacto por grupo de edad</h4>
+                <ul>
+                    <li><b>Niños:</b> Sensibles a niveles regulares y superiores.</li>
+                    <li><b>Adolescentes:</b> Riesgo moderado desde nivel malo.</li>
+                    <li><b>Adultos:</b> Riesgo alto a partir de nivel muy malo.</li>
+                    <li><b>Tercera edad:</b> Afectados desde nivel regular en adelante.</li>
+                </ul>
+            </div>
+        </div>
+
         <div id="locationHeader">
             <span id="mapLocationName">Seleccione una ubicación o busque una dirección</span>
         </div>
     </div>
 
+    <!-- Scripts -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
     <script src="{{ url_for('static', filename='js/mapa.js') }}"></script>
