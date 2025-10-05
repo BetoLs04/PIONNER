@@ -155,6 +155,37 @@
             }
             header img { height: 45px; }
         }
+        #historial-panel {
+    margin-top: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    font-size: 0.9em;
+}
+
+#historial-panel h3 {
+    text-align: center;
+    margin-bottom: 10px;
+    color: #1b3b6f;
+}
+
+#tabla-historial {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#tabla-historial th, #tabla-historial td {
+    border: 1px solid #ccc;
+    padding: 6px 8px;
+    text-align: center;
+}
+
+#tabla-historial th {
+    background-color: #1b3b6f;
+    color: white;
+}
+
     </style>
 </head>
 
@@ -185,6 +216,26 @@
                 </ul>
             </div>
         </div>
+        <!-- 🔹 Historial de ubicaciones -->
+<div id="historial-panel">
+    <h3>Historial de ubicaciones consultadas</h3>
+    <table id="tabla-historial">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Ciudad</th>
+                <th>AQI</th>
+                <th>Estado</th>
+                <th>Lat</th>
+                <th>Lon</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td colspan="6" style="text-align:center;">Sin datos aún...</td></tr>
+        </tbody>
+    </table>
+</div>
+
 
         <div id="locationHeader">
             <span id="mapLocationName">Seleccione una ubicación o busque una dirección</span>

@@ -116,31 +116,123 @@ function generarPopup(aqi, estado, contaminantes, ultima_actualizacion) {
     `;
 }
 
-// Función para crear marcador
+// ---------- crearMarcador (completa y con manejo de errores) ----------
 async function crearMarcador(lat, lon, ciudad = null) {
-    // Llamar a Python para consultar WAQI
-    const resp = await fetch(`/api/waqi?lat=${lat}&lon=${lon}`);
-    const result = await resp.json();
+    try {
+        // Llamada WAQI
+        const resp = await fetch(`/api/waqi?lat=${lat}&lon=${lon}`);
+        if (!resp.ok) {
+            throw new Error(`WAQI HTTP ${resp.status}`);
+        }
+        const result = await resp.json();
 
-    const markerColor = colorAQI(result.aqi);
-    const popupContent = generarPopup(result.aqi, result.estado, result.contaminantes, result.ultima_actualizacion);
+        // Normalizar valores
+        const aqi = (result && ('aqi' in result)) ? result.aqi : null;
+        const estado = result && result.estado ? result.estado : "N/A";
+        const contaminantes = result && result.contaminantes ? result.contaminantes : {};
+        const ultima = result && result.ultima_actualizacion ? result.ultima_actualizacion : null;
 
-    const marker = L.circleMarker([lat, lon], {
-        radius: 10,
-        fillColor: markerColor,
-        color: "#000",
-        weight: 2,
-        opacity: 1,
-        fillOpacity: 0.8
-    }).addTo(map);
+        // Color y popup
+        const markerColor = colorAQI(aqi);
+        const popupContent = generarPopup(aqi, estado, contaminantes, ultima);
 
-    marker.bindPopup(popupContent).openPopup();
+        // Crear marcador
+        const marker = L.circleMarker([Number(lat), Number(lon)], {
+            radius: 10,
+            fillColor: markerColor,
+            color: "#000",
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.8
+        }).addTo(map);
 
-    // Actualizar header flotante
-    const header = document.getElementById("mapLocationName");
-    if (ciudad) header.textContent = ciudad;
-    else header.textContent = `Lat: ${lat.toFixed(2)}, Lon: ${lon.toFixed(2)}`;
+        marker.bindPopup(popupContent).openPopup();
+
+        // Actualizar encabezado
+        const header = document.getElementById("mapLocationName");
+        if (header) {
+            header.textContent = ciudad || `Lat: ${Number(lat).toFixed(2)}, Lon: ${Number(lon).toFixed(2)}`;
+        }
+
+        // Guardar en historial (POST)
+        try {
+            const postResp = await fetch("/api/historial", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    lat: Number(lat),
+                    lon: Number(lon),
+                    ciudad: ciudad || null,
+                    aqi: aqi,
+                    estado: estado
+                })
+            });
+
+            if (!postResp.ok) {
+                // No lanzar para que la tabla intente actualizarse igualmente,
+                // pero avisamos en consola para debugging.
+                console.warn("No se pudo guardar historial. HTTP:", postResp.status);
+                // opcional: const errText = await postResp.text();
+                // console.warn("Respuesta:", errText);
+            } else {
+                // leer respuesta JSON si la hay (no obligatorio)
+                try { const j = await postResp.json(); console.log("Historial guardado:", j); } catch(e){ /* response vacía */ }
+            }
+        } catch (postErr) {
+            console.error("Error en POST /api/historial:", postErr);
+        }
+
+        // Actualizar tabla del historial (mostrarHistorial maneja sus propios errores)
+        await mostrarHistorial();
+
+    } catch (error) {
+        console.error("Error en crearMarcador:", error);
+        // Mensaje al usuario (puedes comentar el alert para no molestar)
+        alert("Ocurrió un error al obtener los datos de la ubicación seleccionada. Revisa la consola para más detalles.");
+    }
 }
+// 🔹 Función para mostrar el historial en la tabla
+async function mostrarHistorial() {
+    try {
+        const resp = await fetch("/api/historial");
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const historial = await resp.json();
+
+        const tbody = document.querySelector("#tabla-historial tbody");
+        if (!tbody) {
+            console.warn("No se encontró la tabla del historial (#tabla-historial tbody)");
+            return;
+        }
+
+        tbody.innerHTML = "";
+
+        if (!Array.isArray(historial) || historial.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Sin registros</td></tr>`;
+            return;
+        }
+
+        historial.forEach(item => {
+            const latText = (item.lat !== null && !isNaN(item.lat)) ? Number(item.lat).toFixed(2) : "N/A";
+            const lonText = (item.lon !== null && !isNaN(item.lon)) ? Number(item.lon).toFixed(2) : "N/A";
+            const fila = document.createElement("tr");
+            fila.innerHTML = `
+                <td>${item.fecha_consulta ?? "N/A"}</td>
+                <td>${item.ciudad || "Desconocido"}</td>
+                <td>${item.aqi ?? "N/A"}</td>
+                <td>${item.estado ?? "N/A"}</td>
+                <td>${latText}</td>
+                <td>${lonText}</td>
+            `;
+            tbody.appendChild(fila);
+        });
+    } catch (error) {
+        console.error("Error al mostrar historial:", error);
+        const tbody = document.querySelector("#tabla-historial tbody");
+        if (tbody)
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Error al cargar historial</td></tr>`;
+    }
+}
+
 
 // Evento clic en el mapa
 map.on('click', async function(e) {
