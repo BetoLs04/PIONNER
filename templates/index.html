@@ -71,6 +71,27 @@
             border-radius: 12px;
             border: 2px solid #1b3b6f;
         }
+
+        /* 🔹 NUEVO: Panel de Pronóstico */
+        #pronostico-panel {
+            margin-top: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            font-size: 0.9em;
+        }
+
+        #pronostico-panel h3 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #1b3b6f;
+        }
+
+        #contenedor-pronostico {
+            margin-top: 10px;
+        }
+
         #info-panel {
             margin-top: 15px;
             background: rgba(255, 255, 255, 0.95);
@@ -155,37 +176,37 @@
             }
             header img { height: 45px; }
         }
+        
         #historial-panel {
-    margin-top: 20px;
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-    font-size: 0.9em;
-}
+            margin-top: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            font-size: 0.9em;
+        }
 
-#historial-panel h3 {
-    text-align: center;
-    margin-bottom: 10px;
-    color: #1b3b6f;
-}
+        #historial-panel h3 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #1b3b6f;
+        }
 
-#tabla-historial {
-    width: 100%;
-    border-collapse: collapse;
-}
+        #tabla-historial {
+            width: 100%;
+            border-collapse: collapse;
+        }
 
-#tabla-historial th, #tabla-historial td {
-    border: 1px solid #ccc;
-    padding: 6px 8px;
-    text-align: center;
-}
+        #tabla-historial th, #tabla-historial td {
+            border: 1px solid #ccc;
+            padding: 6px 8px;
+            text-align: center;
+        }
 
-#tabla-historial th {
-    background-color: #1b3b6f;
-    color: white;
-}
-
+        #tabla-historial th {
+            background-color: #1b3b6f;
+            color: white;
+        }
     </style>
 </head>
 
@@ -198,6 +219,16 @@
 
     <div class="container">
         <div id="map"></div>
+        
+        <div id="pronostico-panel">
+            <h3>📊 Pronóstico de Calidad del Aire</h3>
+            <div id="contenedor-pronostico">
+                <div style="text-align: center; padding: 20px; color: #666;">
+                    Cargando pronóstico...
+                </div>
+            </div>
+        </div>
+        
         <div id="info-panel">
             <h3>Rangos de Calidad del Aire (SINAICA)</h3>
             <div class="range verde">&lt; 50 <span>Bueno</span></div>
@@ -216,35 +247,166 @@
                 </ul>
             </div>
         </div>
-        <!-- 🔹 Historial de ubicaciones -->
-<div id="historial-panel">
-    <h3>Historial de ubicaciones consultadas</h3>
-    <table id="tabla-historial">
-        <thead>
-            <tr>
-                <th>Fecha</th>
-                <th>Ciudad</th>
-                <th>AQI</th>
-                <th>Estado</th>
-                <th>Lat</th>
-                <th>Lon</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr><td colspan="6" style="text-align:center;">Sin datos aún...</td></tr>
-        </tbody>
-    </table>
-</div>
 
+        <!-- Historial de ubicaciones -->
+        <div id="historial-panel">
+            <h3>Historial de ubicaciones consultadas</h3>
+            <table id="tabla-historial">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Ciudad</th>
+                        <th>AQI</th>
+                        <th>Estado</th>
+                        <th>Lat</th>
+                        <th>Lon</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="6" style="text-align:center;">Sin datos aún...</td></tr>
+                </tbody>
+            </table>
+        </div>
 
         <div id="locationHeader">
             <span id="mapLocationName">Seleccione una ubicación o busque una dirección</span>
         </div>
     </div>
 
-    <!-- Scripts -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
     <script src="{{ url_for('static', filename='js/mapa.js') }}"></script>
+    
+    <script>
+        // Función para mostrar pronóstico
+async function mostrarPronostico() {
+    try {
+        const resp = await fetch("/api/pronostico");
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const pronostico = await resp.json();
+
+        const contenedor = document.getElementById("contenedor-pronostico");
+        if (!contenedor) return;
+
+        // 🔹 MEJORA: Mostrar mensaje amigable cuando no hay datos
+        if (pronostico.datos_analizados === 0 || pronostico.confianza === 0) {
+            contenedor.innerHTML = `
+                <div style="border: 2px solid #95a5a6; padding: 20px; border-radius: 10px; background: #f9f9f9; text-align: center;">
+                    <h3 style="margin-top: 0; color: #95a5a6;">📊 Pronóstico de Calidad del Aire</h3>
+                    <div style="color: #666; margin-bottom: 15px;">
+                        <strong>Se necesitan datos históricos para generar pronósticos</strong>
+                    </div>
+                    <div style="font-size: 0.9em; color: #7f8c8d;">
+                        💡 <strong>Sugerencia:</strong> Haz clic en varias ciudades del mapa o consulta diferentes ubicaciones
+                    </div>
+                    <div style="margin-top: 10px; font-size: 0.8em; color: #95a5a6;">
+                        Se necesitan al menos 3 registros para análisis de tendencias
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        // 🔹 CORRECCIÓN: Usar color según el AQI pronosticado en lugar de la tendencia
+        function colorSegunAQI(aqi) {
+            if (aqi <= 50) return "#00e400";        // Verde - Bueno
+            else if (aqi <= 100) return "#ffff00";  // Amarillo - Regular  
+            else if (aqi <= 150) return "#ff7e00";  // Naranja - Malo
+            else if (aqi <= 200) return "#ff0000";  // Rojo - Muy Malo
+            else return "#8f3f97";                  // Morado - Extremadamente Malo
+        }
+
+        function textoEstadoAQI(aqi) {
+            if (aqi <= 50) return "BUENA";
+            else if (aqi <= 100) return "REGULAR";
+            else if (aqi <= 150) return "MALA";
+            else if (aqi <= 200) return "MUY MALA";
+            else return "EXTREMADAMENTE MALA";
+        }
+
+        const colorCalidad = colorSegunAQI(pronostico.pronostico_aqi);
+        const estadoCalidad = textoEstadoAQI(pronostico.pronostico_aqi);
+        
+        const colorTendencia = {
+            alza: "#e74c3c",
+            baja: "#27ae60", 
+            estable: "#3498db",
+            desconocida: "#95a5a6"
+        }[pronostico.tendencia];
+
+        const iconoTendencia = {
+            alza: "📈",
+            baja: "📉",
+            estable: "➡️",
+            desconocida: "❓"
+        }[pronostico.tendencia];
+
+        contenedor.innerHTML = `
+            <div style="border: 2px solid ${colorCalidad}; padding: 15px; border-radius: 10px; background: #f9f9f9; margin: 10px 0;">
+                <h3 style="margin-top: 0; color: ${colorCalidad}; display: flex; align-items: center; gap: 8px;">
+                    📊 Pronóstico de Calidad del Aire
+                </h3>
+                
+                <!-- 🔹 NUEVO: Estado de calidad con color correcto -->
+                <div style="background: ${colorCalidad}; color: ${pronostico.pronostico_aqi <= 100 ? '#000' : '#fff'}; padding: 10px; border-radius: 8px; text-align: center; margin: 10px 0; font-weight: bold;">
+                    CALIDAD ${estadoCalidad} (AQI: ${pronostico.pronostico_aqi})
+                </div>
+                
+                <div style="margin-bottom: 8px;"><strong>Pronóstico:</strong> ${pronostico.pronostico}</div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0;">
+                    <div>
+                        <strong>Tendencia:</strong><br>
+                        <span style="color: ${colorTendencia}; font-weight: bold; display: flex; align-items: center; gap: 4px;">
+                            ${iconoTendencia} ${pronostico.tendencia.toUpperCase()}
+                        </span>
+                    </div>
+                    <div>
+                        <strong>Confianza:</strong><br>
+                        <span style="font-weight: bold; color: ${pronostico.confianza > 70 ? '#27ae60' : pronostico.confianza > 40 ? '#f39c12' : '#e74c3c'}">
+                            ${pronostico.confianza}%
+                        </span>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; font-size: 0.85em; color: #666; border-top: 1px solid #eee; padding-top: 8px;">
+                    <span><strong>📈 Datos analizados:</strong> ${pronostico.datos_analizados || 0}</span>
+                    ${pronostico.ultimo_aqi ? 
+                        `<span><strong>🔍 Último AQI:</strong> ${pronostico.ultimo_aqi}</span>` : 
+                        ''
+                    }
+                </div>
+                
+                ${pronostico.ubicacion ? 
+                    `<div style="margin-top: 8px; font-size: 0.8em; color: #7f8c8d; text-align: center;">
+                        <strong>📍 Ubicación:</strong> ${pronostico.ubicacion}
+                    </div>` : 
+                    ''
+                }
+            </div>
+        `;
+
+    } catch (error) {
+        console.error("Error al mostrar pronóstico:", error);
+        const contenedor = document.getElementById("contenedor-pronostico");
+        if (contenedor) {
+            contenedor.innerHTML = `
+                <div style="border: 2px solid #95a5a6; padding: 15px; border-radius: 10px; background: #f9f9f9; color: #e74c3c; text-align: center;">
+                    ❌ Error al cargar el pronóstico<br>
+                    <small>Verifica la conexión o intenta más tarde</small>
+                </div>
+            `;
+        }
+    }
+}
+
+        // Cargar pronóstico cuando la página se carga
+        document.addEventListener('DOMContentLoaded', function() {
+            mostrarPronostico();
+            
+            // Actualizar cada 5 minutos
+            setInterval(mostrarPronostico, 300000);
+        });
+    </script>
 </body>
 </html>
